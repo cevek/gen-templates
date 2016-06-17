@@ -46,7 +46,7 @@ export function kebab_case(name:string) {
     return parts.map(word => isAbbr(word) ? word : lowerCase(word)).join('-');
 }
 
-export function pluralize(name:string) {
+export function pluralizeLastWord(name:string) {
     const parts = getWords(name);
     if (parts.length == 0) {
         return name;
@@ -55,6 +55,16 @@ export function pluralize(name:string) {
     const lastPos = name.lastIndexOf(lastWord);
 
     return name.substr(0, lastPos) + plural(lastWord) + name.substr(lastPos + lastWord.length);
+}
+export function singularizeLastWord(name:string) {
+    const parts = getWords(name);
+    if (parts.length == 0) {
+        return name;
+    }
+    const lastWord = parts.pop();
+    const lastPos = name.lastIndexOf(lastWord);
+
+    return name.substr(0, lastPos) + plural.singular(lastWord) + name.substr(lastPos + lastWord.length);
 }
 
 function strToMap(str:string) {
@@ -192,8 +202,17 @@ export function tests() {
     assert(getWords('NameABBRRetain'), 'Name, ABBR, Retain');
     assert(getWords('NameABBR_XRetain'), 'Name, ABBR, X, Retain');
 
-    assert(pluralize('Case'), 'Cases');
-    assert(pluralize('camelApple'), 'camelApples');
-    assert(pluralize('camel_book'), 'camel_books');
-    assert(pluralize('NameABBR_XRetain_'), 'NameABBR_XRetains_');
+    assert(pluralizeLastWord('Case'), 'Cases');
+    assert(pluralizeLastWord('Cases'), 'Cases');
+    assert(pluralizeLastWord('books'), 'books');
+    assert(pluralizeLastWord('camelApple'), 'camelApples');
+    assert(pluralizeLastWord('camel_book'), 'camel_books');
+    assert(pluralizeLastWord('NameABBR_XRetain_'), 'NameABBR_XRetains_');
+
+    assert(singularizeLastWord('Cases'), 'Case');
+    assert(singularizeLastWord('Case'), 'Case');
+    assert(singularizeLastWord('book'), 'book');
+    assert(singularizeLastWord('camelApples'), 'camelApple');
+    assert(singularizeLastWord('camel_books'), 'camel_book');
+    assert(singularizeLastWord('NameABBR_XRetains_'), 'NameABBR_XRetain_');
 }
