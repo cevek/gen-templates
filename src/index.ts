@@ -1,39 +1,45 @@
-import {statSync, readdirSync} from "fs";
-import * as path from "path";
-import {tests} from "../utils";
+"use strict";
 
+import {readdirSync, readFileSync} from "fs";
+import {GeneratorClass} from "../GeneratorFunction";
+import {findGenTemplatesRoot, templateFolderName, writeFile} from "./main";
+import {tests} from "../utils";
 
 const args = process.argv;
 
-const templateFolderName = 'gen-templates';
-
-function findGenTemplates() {
-    const currDir = process.cwd();
-    const parts = currDir.split(path.sep);
-
-    for (var i = 0, len = parts.length; i < len; i++) {
-        const dirName = parts.join('/') + '/' + templateFolderName;
-        let exists = false;
-        try {exists = statSync(dirName).isDirectory()} catch (e) {}
-        if (exists) {
-            return dirName;
-        }
-        parts.pop();
-    }
-    return null;
-}
-
 function getCommands(dir:string) {
-    return readdirSync(dir).filter(file => file.toLowerCase().substr(-3) == '.js').map(file => ({
-        command: file.toLowerCase().substr(0, -3),
-        file: dir + file,
-    }));
+    return readdirSync(dir).filter(file => file.toLowerCase().substr(-3) == '.js').reduce((obj, file) => {
+        const filename = file.toLowerCase();
+        obj[filename.substr(0, filename.length - 3)] = dir + file;
+        return obj;
+    }, {} as {[n:string]:string});
 }
 
-const templateDirPath = findGenTemplates();
-const commands = getCommands(templateDirPath);
 
+const templateDirPath = findGenTemplatesRoot();
+const commands = getCommands(templateDirPath + templateFolderName + '/');
+
+
+const commandName = args[2];
+const commandFile = commands[commandName];
+console.log(commands);
+
+if (commandFile) {
+    console.log(commandFile);
+    const GenClass = require(commandFile).default as any;
+    const generatorClass:GeneratorClass = new GenClass();
+    const result = generatorClass.generator();
+    for (let i = 0; i < result.length; i++) {
+        const res = result[i];
+        writeFile(res.filename, res.content, true);
+    }
+    console.log(`Done. Created files: ${result.length}`);
+
+}
+else {
+    console.log(`Command not found: ${commandName}`);
+}
 
 console.log(templateDirPath);
-tests();
+// tests();
 

@@ -75,7 +75,7 @@ function strToMap(str:string) {
     return map;
 }
 const upperLetters = strToMap('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
-const lowerLetters = strToMap('abcdefghijklmnopqrstuvwxyz');
+const lowerLetters = strToMap('abcdefghijklmnopqrstuvwxyz1234567890');
 
 export function isAbbr(word:string) {
     for (var i = 0; i < word.length; i++) {
@@ -162,6 +162,7 @@ const types:{[type:string]:string} = {
     longtext: 'string',
     enum: 'string[]',
     set: 'string[]',
+    json: 'any'
 }
 
 interface DDLTable {
@@ -175,13 +176,16 @@ interface DDLTableField {
     size:number;
     tsType:string;
     notNull:boolean;
-    primary?: boolean;
+    primary?:boolean;
     unsigned?:boolean;
     autoIncrement?:boolean;
     defaultValue?:string;
+    generated?:boolean;
 }
-function parseDDL(text:string) {
-    text = text.replace(/--.*$/gm, ''); // remove one online comments
+export function parseDDL(text:string) {
+    text = text.replace(/--.*$/gm, '');
+    text = text.replace(/#.*$/gm, '');
+    text = text.replace(/\/\*[\s\S]*?\*\//g, '');
     const queries = text.replace(/[\n\r]/g, '').split(';');
     const tables:DDLTable[] = [];
     for (let i = 0; i < queries.length; i++) {
@@ -192,7 +196,7 @@ function parseDDL(text:string) {
             const table = m[1];
             const fields = m[2].split(',');
             const normFields:DDLTableField[] = [];
-            const fieldsMap:{[name: string]: DDLTableField} = {};
+            const fieldsMap:{[name:string]:DDLTableField} = {};
             for (let j = 0; j < fields.length; j++) {
                 const fieldStr = fields[j].trim();
                 const f = fieldStr.match(/^`(\w+)`\s*(\w+)(\((\d+)\))?/i);
@@ -206,7 +210,7 @@ function parseDDL(text:string) {
                     if (!tsType) {
                         throw new Error('type is not recognized: ' + f[2]);
                     }
-                    const field:DDLTableField  = {
+                    const field:DDLTableField = {
                         field: f[1],
                         type: type,
                         size: size,
@@ -219,6 +223,9 @@ function parseDDL(text:string) {
                     if (fieldStr.match(/ AUTO_INCREMENT/i)) {
                         field.autoIncrement = true;
                     }
+                    if (fieldStr.match(/ GENERATED/i)) {
+                        field.generated = true;
+                    }
                     const defaultValMatch = fieldStr.match(/ DEFAULT '(.*?)'/);
                     if (defaultValMatch) {
                         field.defaultValue = defaultValMatch[1];
@@ -226,9 +233,14 @@ function parseDDL(text:string) {
                     fieldsMap[field.field] = field;
                     normFields.push(field);
                 }
-                const pkMath = fieldStr.match(/^PRIMARY KEY \(`(.*?)`\)/);
-                if (pkMath) {
-                    fieldsMap[pkMath[1]].primary = true;
+                const pkMatch = fieldStr.match(/^PRIMARY KEY \(`(.*?)`\)/);
+                if (pkMatch) {
+                    fieldsMap[pkMatch[1]].primary = true;
+                }
+
+                const uniqueMatch = fieldStr.match(/^UNIQUE KEY `.*?` \((.*?)\)/);
+                if (uniqueMatch) {
+                    //todo:
                 }
             }
             tables.push({table: table, fields: normFields});
@@ -236,6 +248,7 @@ function parseDDL(text:string) {
     }
     return tables;
 }
+
 
 export function tests() {
 
@@ -305,12 +318,16 @@ export function tests() {
     assert(getWords('camelCase'), 'camel, Case');
     assert(getWords('CamelCase'), 'Camel, Case');
     assert(getWords('camel_Case'), 'camel, Case');
+    assert(getWords('camel123Case'), 'camel123, Case');
+    assert(getWords('123camelCase'), '123camel, Case');
+    assert(getWords('123CamelCase'), '123, Camel, Case');
     assert(getWords('camel Case'), 'camel, Case');
     assert(getWords('_camelCase'), 'camel, Case');
     assert(getWords('_camel_Case'), 'camel, Case');
     assert(getWords('_camel_Case_'), 'camel, Case');
     assert(getWords('_camel_case_'), 'camel, case');
     assert(getWords('_camel__case_'), 'camel, case');
+    assert(getWords('_camel123__case_'), 'camel123, case');
     assert(getWords('_x__y_'), 'x, y');
     assert(getWords('camel'), 'camel');
     assert(getWords('_camel!_'), 'camel');
@@ -342,6 +359,8 @@ export function tests() {
 CREATE TABLE \`state\` (
   \`id\` int(11) unsigned NULL AUTO_INCREMENT,
   -- \`country_id\` int(11) unsigned NOT NULL,
+  # \`country_id2\` int(11) unsigned NOT NULL,
+  /* \`country_id3\` int(11) unsigned NOT NULL,*/
   \`name\` varchar(255) NOT NULL,
   \`abbreviation\` varchar(255) NOT NULL,
   \`is_enabled\` tinyint(1) zerofill DEFAULT '1',
@@ -350,7 +369,16 @@ CREATE TABLE \`state\` (
 `), [{
         table: 'state',
         fields: [
-            {field: 'id', type: 'int', size: 11, tsType: 'number', unsigned: true, notNull: false, primary: true, autoIncrement: true},
+            {
+                field: 'id',
+                type: 'int',
+                size: 11,
+                tsType: 'number',
+                unsigned: true,
+                notNull: false,
+                primary: true,
+                autoIncrement: true
+            },
             {field: 'name', size: 255, type: 'varchar', tsType: 'string', notNull: true},
             {field: 'abbreviation', size: 255, type: 'varchar', tsType: 'string', notNull: true},
             {field: 'is_enabled', type: 'tinyint', size: 1, tsType: 'boolean', notNull: false, defaultValue: '1'}

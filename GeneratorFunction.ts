@@ -1,8 +1,6 @@
-export interface GeneratorFunction {
-    (...args:string[]):GeneratorFunctionResult;
+export interface GeneratorClass {
+    generator():GeneratorFileItem[];
 }
-
-export type GeneratorFunctionResult = GeneratorFileItem[];
 
 export interface GeneratorFileItem {
     filename:string,
