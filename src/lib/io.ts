@@ -1,6 +1,16 @@
 import {statSync, readFileSync, writeFileSync, accessSync, mkdirSync} from "fs";
-import {sep, dirname, join} from "path";
+import {sep, dirname} from "path";
+import {trimLines} from "./strings";
+import {readdirSync} from "fs";
 export const templateFolderName = 'gen-templates';
+
+export function println(str:string) {
+    console.log(trimLines(str));
+}
+
+export function printlnError(str:string) {
+    console.error(trimLines(str));
+}
 
 export function findGenTemplatesRoot() {
     const currDir = process.cwd();
@@ -42,7 +52,7 @@ function createDir(path:string) {
     }
 }
 
-function createNonExistentDirs(dirpath:string) {
+export function createNonExistentDirs(dirpath:string) {
     var parts = dirpath.split(sep);
     for (let i = 1; i <= parts.length; i++) {
         const dir = parts.slice(0, i).join(sep) || sep;
@@ -57,9 +67,17 @@ export function writeFile(path:string, content:string, override?:boolean) {
     path = findGenTemplatesRoot() + path;
     createNonExistentDirs(dirname(path));
     if (isExist(path) && !override) {
-        console.log(`File ${path} already exists`);
+        println(`File ${path} already exists`);
         return;
     }
-    console.log(`create: ${path}`);
+    println(`Create file: ${path}`);
     writeFileSync(path, content);
+}
+
+export function getCommands(dir:string) {
+    return readdirSync(dir).filter(file => file.toLowerCase().substr(-3) == '.js').reduce((obj, file) => {
+        const filename = file.toLowerCase();
+        obj[filename.substr(0, filename.length - 3)] = dir + file;
+        return obj;
+    }, {} as {[n:string]:string});
 }

@@ -1,45 +1,72 @@
 "use strict";
+import {IGeneratorClass} from "./lib/igenerator-class";
+import {println, printlnError, findGenTemplatesRoot, templateFolderName, writeFile, getCommands} from "./lib/io";
+import {UpperCamelCase, trimLines} from "./lib/strings";
 
-import {readdirSync, readFileSync} from "fs";
-import {GeneratorClass} from "../GeneratorFunction";
-import {findGenTemplatesRoot, templateFolderName, writeFile} from "./main";
-import {tests} from "../utils";
-
-const args = process.argv;
-
-function getCommands(dir:string) {
-    return readdirSync(dir).filter(file => file.toLowerCase().substr(-3) == '.js').reduce((obj, file) => {
-        const filename = file.toLowerCase();
-        obj[filename.substr(0, filename.length - 3)] = dir + file;
-        return obj;
-    }, {} as {[n:string]:string});
-}
-
+var argv:Arguments = require('minimist')(process.argv.slice(2), {string: true});
 
 const templateDirPath = findGenTemplatesRoot();
 const commands = getCommands(templateDirPath + templateFolderName + '/');
 
+if (argv.help || argv.h) {
+    println(`
+        -h, --help - Output this help
+        --new name create new generator file
+    `);
 
-const commandName = args[2];
-const commandFile = commands[commandName];
-console.log(commands);
-
-if (commandFile) {
-    console.log(commandFile);
-    const GenClass = require(commandFile).default as any;
-    const generatorClass:GeneratorClass = new GenClass();
-    const result = generatorClass.generator();
-    for (let i = 0; i < result.length; i++) {
-        const res = result[i];
-        writeFile(res.filename, res.content, true);
+} else if (argv.new) {
+    if (typeof argv.new !== 'string' || !argv.new.match(/^[\w\d_\-.$]+$/)) {
+        printlnError(`${argv.new} is not valid command name`);
     }
-    console.log(`Done. Created files: ${result.length}`);
+    const content = `
+        import {GeneratorClass} from "../GeneratorFunction";
+        import {UpperCamelCase, lowerCamelCase, trimLines} from "../utils";
+        export default class ${UpperCamelCase(argv.new)} implements GeneratorClass {
+            help(){
+                return \`
+                    Creates something good
+                \`;
+            }
+            
+            generator(args:{_:string[], optional:boolean}) {
+                const name = args._[0];
+                if (!name) {
+                    throw new Error("name is required");
+                }
+                const cls = UpperCamelCase(name);
+                const lowerCase = lowerCamelCase(name);
+                const optional = args.optional;
+                return [
+                    {
+                        filename: \`src/models/\${cls}.ts\`,
+                        content: trimLines(\`
+                            export class \${cls} {
+                                foo\${optional ? '?' : ''}: string;
+                            }
+                            const \${lowerCase} = new \${cls}();
+                        \`)
+                    }
+                ]
+            }
+        }
+        `;
+    writeFile(templateFolderName + '/' + argv.new + '.ts', trimLines(content), argv.o);
 
+} else {
+    const commandName = argv._.shift();
+    const commandFile = commands[commandName];
+    if (commandFile) {
+        console.log(commandFile);
+        const GenClass = require(commandFile).default as any;
+        const generatorClass:IGeneratorClass = new GenClass();
+        const result = generatorClass.generator(argv);
+        for (let i = 0; i < result.length; i++) {
+            const res = result[i];
+            writeFile(res.filename, res.content, argv.o);
+        }
+    }
+    else {
+        println(`Command not found: ${commandName}`);
+    }
 }
-else {
-    console.log(`Command not found: ${commandName}`);
-}
-
-console.log(templateDirPath);
-// tests();
 
