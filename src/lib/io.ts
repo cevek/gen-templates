@@ -30,8 +30,7 @@ export function findGenTemplatesRoot() {
 }
 
 export function readFile(path:string) {
-    const templateDirPath = findGenTemplatesRoot();
-    return readFileSync(templateDirPath + path).toString();
+    return readFileSync(path, 'utf-8');
 }
 
 export function isExist(path:string) {
@@ -64,7 +63,6 @@ export function createNonExistentDirs(dirpath:string) {
 
 
 export function writeFile(path:string, content:string, override?:boolean) {
-    path = findGenTemplatesRoot() + path;
     createNonExistentDirs(dirname(path));
     if (isExist(path) && !override) {
         println(`File ${path} already exists`);
@@ -80,4 +78,8 @@ export function getCommands(dir:string) {
         obj[filename.substr(0, filename.length - 3)] = dir + file;
         return obj;
     }, {} as {[n:string]:string});
+}
+
+export function currentDir() {
+    return process.cwd();
 }
