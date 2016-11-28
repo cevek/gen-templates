@@ -8,7 +8,8 @@
     "outDir": "dist"
   },
   "files": [
-    "src/index"
+    "src/index",
+    "src/lib/processor"
   ],
   "exclude": [
     "node_modules"

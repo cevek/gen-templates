@@ -1,6 +1,6 @@
 {
   "name": "gen-templates",
-  "version": "0.0.3",
+  "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
   "keywords": [],
@@ -13,6 +13,8 @@
   "dependencies": {
     "@types/node": "^6.0.42",
     "minimist": "^1.2.0",
-    "pluralize": "^2.0.0"
+    "pluralize": "^2.0.0",
+    "ts-node": "^1.7.0",
+    "typescript": "^2.0.10"
   }
 }

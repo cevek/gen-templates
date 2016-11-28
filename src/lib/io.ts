@@ -73,7 +73,7 @@ export function writeFile(path:string, content:string, override?:boolean) {
 }
 
 export function getCommands(dir:string) {
-    return readdirSync(dir).filter(file => file.toLowerCase().substr(-3) == '.js').reduce((obj, file) => {
+    return readdirSync(dir).filter(file => file.match(/[jt]s$/i)).reduce((obj, file) => {
         const filename = file.toLowerCase();
         obj[filename.substr(0, filename.length - 3)] = dir + file;
         return obj;

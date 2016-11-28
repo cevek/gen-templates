@@ -1,3 +1,4 @@
+require('ts-node/register');
 import {println, printlnError, findGenTemplatesRoot, templateFolderName, writeFile, getCommands} from "./io";
 import {UpperCamelCase, trimLines} from "./strings";
 import {Arguments} from './arguments';
